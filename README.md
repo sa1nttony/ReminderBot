@@ -70,7 +70,7 @@ A couple more steps to launch the bot:
    |   |   +---.env
    +---ReminderBot
    ```
-4. Enter your API in `.env`
+4. Enter your API Key in `.env`
    ```js
    TOKEN = 'your token here'
    ```
