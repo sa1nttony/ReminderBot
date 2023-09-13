@@ -2,7 +2,10 @@ import os
 
 from dotenv import load_dotenv
 
-local_env = 'M:\projects\environments\ReminderBot\.env'
+os.chdir('../')
+os.chdir(os.path.join('environments', 'ReminderBot'))
+
+local_env = os.path.join(os.getcwd(), '.env')
 
 if os.path.exists(local_env):
     load_dotenv(local_env)
