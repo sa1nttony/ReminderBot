@@ -1,7 +1,7 @@
-\draft.py
-\draft2.py
-\inserting_draft.py
-\s.py
+/draft.py
+/draft2.py
+/inserting_draft.py
+/s.py
 /DB/db.sqlite3
 /DB/draft3.py
 /DB/__pycache__
