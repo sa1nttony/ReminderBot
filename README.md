@@ -72,9 +72,9 @@ A couple more steps to launch the bot:
    ```
 4. Enter your API Key in `.env`
    ```js
-   TOKEN = 'your token here'
+   TOKEN = 'your API Key here'
    ```
-5. Run app.py in any IDE
+5. Run `app.py` in any IDE
 
 
 <!-- USAGE EXAMPLES -->
