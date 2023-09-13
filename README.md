@@ -74,7 +74,8 @@ A couple more steps to launch the bot:
    ```js
    TOKEN = 'your API Key here'
    ```
-5. Run `app.py` in any IDE
+5. Run `db_initial.py` in any IDE to make your own database
+6. Run `app.py` in any IDE
 
 
 <!-- USAGE EXAMPLES -->
