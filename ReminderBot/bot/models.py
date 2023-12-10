@@ -27,4 +27,3 @@ class Task(models.Model):
     date = models.DateTimeField()
     complete = models.BooleanField(default=False)
     user = models.ForeignKey(Account, on_delete=models.CASCADE)
-
