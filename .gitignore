@@ -1,10 +1,10 @@
-/draft.py
-/draft2.py
-/inserting_draft.py
-/s.py
-/DB/db.sqlite3
-/DB/draft3.py
-/DB/__pycache__
+/Old/draft.py
+/Old/draft2.py
+/Old/inserting_draft.py
+/Old/s.py
+/Old/DB/db.sqlite3
+/Old/DB/draft3.py
+/Old/DB/__pycache__
 /.idea
 /__pycache__
 /venv

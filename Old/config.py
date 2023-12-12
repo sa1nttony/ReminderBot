@@ -2,8 +2,8 @@ import os
 
 from dotenv import load_dotenv
 
-os.chdir('../')
-os.chdir(os.path.join('environments', 'ReminderBot'))
+os.chdir('../../')
+os.chdir(os.path.join('environments', '../ReminderBot'))
 
 local_env = os.path.join(os.getcwd(), '.env')
 
