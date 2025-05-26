@@ -7,5 +7,9 @@
 /Old/DB/__pycache__
 /.idea
 /__pycache__
-/venv
+/new_venv
 /venv_mac
+/ReminderBot/ReminderBot/__pycache__
+/ReminderBot/bot/__pycache__/
+ReminderBot/__pycache__/
+ReminderBot/bot/migrations/__pycache__/

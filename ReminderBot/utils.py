@@ -153,7 +153,8 @@ def generate_code():
     return password
 
 
-def new_task(header, description, date, user, chat):
+def new_task(header, description, date, username, chat):
+    user = User.objects.get(username=username)
     Task.objects.create(header=header, description=description, date=date, user=user, chat=chat)
 
 
