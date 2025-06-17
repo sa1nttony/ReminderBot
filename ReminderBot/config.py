@@ -12,5 +12,3 @@ if os.path.exists(local_env):
     load_dotenv(local_env)
 
 TOKEN = os.getenv('TOKEN')
-
-

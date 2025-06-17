@@ -1,13 +1,18 @@
 import os
 import django
 import random
+import datetime
+import pytz
+from timezonefinder import TimezoneFinder
 
 os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'ReminderBot.settings')
 django.setup()
 
-from bot.models import User, Task
+from bot.models import Task, Chat
+from django.contrib.auth import get_user_model
+User = get_user_model()
 
-
+#Exceptions
 class ReminderBotException(Exception):
     pass
 
@@ -32,99 +37,63 @@ class IncorrectFormat(ReminderBotException):
         return "Данные введены в некорректном формате"
 
 
-# class Task:
-#     def __init__(self):
-#         self.header = None
-#         self.description = None
-#         self.date = None
-#         self.time = None
-#         self.complete = 0
-#         self.user_id = None
-#         self.creator_id = None
-#
-#     def __str__(self):
-#         return f'{self.header}: \n{self.description} \nЗапланировано: \n{self.date + " " + self.time}'
-#
-#     @property
-#     def get_header(self):
-#         return self.header
-#
-#     @get_header.setter
-#     def get_header(self, header):
-#         self.header = header
-#
-#     @property
-#     def get_description(self):
-#         return self.description
-#
-#     @get_description.setter
-#     def get_description(self, description):
-#         self.description = description
-#
-#     @property
-#     def get_date(self):
-#         return self.date
-#
-#     @get_date.setter
-#     def get_date(self, date):
-#         try:
-#             request_date = datetime.datetime.strptime(date, '%d %m %Y').date()
-#         except Exception:
-#             raise FakeDate
-#         else:
-#             now = datetime.datetime.now().date()
-#             if now > request_date:
-#                 raise TimePassed(f'{date} - эта дата уже прошла')
-#             else:
-#                 self.date = date
-#
-#     @property
-#     def get_time(self):
-#         return self.time
-#
-#     @get_time.setter
-#     def get_time(self, time):
-#         request_date_time = self.date + ' ' + time
-#         try:
-#             date_time = datetime.datetime.strptime(request_date_time, '%d %m %Y %H:%M')
-#         except Exception:
-#             raise IncorrectFormat
-#         else:
-#             now = datetime.datetime.now()
-#             if now > date_time:
-#                 raise TimePassed(f'{date_time} - это время уже прошло')
-#             else:
-#                 self.time = time
-#
-#     @property
-#     def get_user_id(self):
-#         return self.user_id
-#
-#     @get_user_id.setter
-#     def get_user_id(self, user_id):
-#         self.user_id = user_id    \
-#
-#     @property
-#     def get_creator_id(self):
-#         return self.creator_id
-#
-#     @get_creator_id.setter
-#     def get_creator_id(self, creator_id):
-#         self.creator_id = creator_id
-#
-#     def completed(self):
-#         self.complete = 1
-#
-#     def db_export(self):
-#         new_task(self.header, self.description, self.date, self.time, self.complete, self.user_id, self.creator_id)
+#Functions
+
+#Check and convert date and time to correct datetime object
+#datetime_str - str format %d.%m.%Y %H:%M
+def validate_datetime(datetime_str: str) -> datetime:
+        try:
+            date_time = datetime.datetime.strptime(datetime_str, '%d.%m.%Y %H:%M')
+        except Exception:
+            raise IncorrectFormat
+        else:
+            now = datetime.datetime.now()
+            if now > date_time:
+                raise TimePassed(f'{date_time} - это время уже прошло')
+            else:
+                return date_time
 
 
-def add_new_user(firstname, username):
+#Convert user local datetime to UTC
+#datetime_dt: datetime - user local datetime object
+#timezone: str - user timezone string (example 'Asia/Yekaterinburg')
+def convert_to_utc(datetime_dt: datetime, timezone: str) -> datetime:
+    user_tz = pytz.timezone(timezone)
+
+    user_datetime = user_tz.localize(datetime_dt)
+    utc_datetime = user_datetime.astimezone(pytz.UTC)
+    return utc_datetime
+
+
+def get_timezone_by_location(latitude, longitude):
+    tf = TimezoneFinder()
+    time_zone_str = tf.timezone_at(lat=latitude, lng=longitude)
+    return time_zone_str
+
+
+def generate_code():
+    chars = '1234567890ABCDEFGHIJKLMNOPQRSTUVWXYZ'
+    password = ''
+    for i in range(6):
+        position = random.randint(0, 35)
+        password += chars[position]
+    return password
+
+#ORM+ Functions
+def add_new_user(firstname, username, telegram_id):
     if user_exist(username):
         raise UserAlreadyExist
     else:
         password = generate_code()
-        User.objects.create(first_name=firstname, username=username, password=password)
+        user = User.objects.create(first_name=firstname, username=username, telegram_id=telegram_id)
+        user.set_password(password)
+        user.save()
+        return password
+
+def update_user_tz(timezone: str, telegram_id: str):
+    user = User.objects.get(telegram_id=telegram_id)
+    user.timezone = timezone
+    user.save()
 
 
 def user_exist(username):
@@ -144,26 +113,19 @@ def new_password(username):
     user.save()
 
 
-def generate_code():
-    chars = '1234567890ABCDEFGHIJKLMNOPQRSTUVWXYZ'
-    password = ''
-    for i in range(6):
-        position = random.randint(0, 35)
-        password += chars[position]
-    return password
-
-
-def new_task(header, description, date, username, chat):
+def new_task(header, description, date, username):
     user = User.objects.get(username=username)
-    Task.objects.create(header=header, description=description, date=date, user=user, chat=chat)
+    Task.objects.create(header=header, description=description, date=date, user=user)
 
 
+#Testing
 if __name__ == '__main__':
-    a = get_account('sa1nttony')
-    print(a['username'], a['password'])
-    new_password(a['username'])
-    b = get_account('sa1nttony')
-    print(b['username'], b['password'])
+    add_new_user("test", "test2")
+    # a = get_account('sa1nttony')
+    # print(a['username'], a['password'])
+    # new_password(a['username'])
+    # b = get_account('sa1nttony')
+    # print(b['username'], b['password'])
     # add_new_user('anton', 'antonius7')
     # task = Task()
     # task.get_date = '01 09 2023'
