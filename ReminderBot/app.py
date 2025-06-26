@@ -259,7 +259,7 @@ def update_task(message, task_id, field, bot_message):
 <strong>Дата и время</strong>: <em>{task.date}</em>"""
     tbot.edit_message_text(chat_id=bot_message.chat.id, message_id=bot_message.id, text=text)
 
-#TODO Написать функцию для отправки уведомления
+#TODO Написать функцию для отправки уведомления/
 def send_remind():
     pass
 
