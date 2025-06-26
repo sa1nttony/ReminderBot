@@ -24,5 +24,6 @@ class Task(models.Model):
     description = models.TextField()
     date = models.DateTimeField()
     complete = models.BooleanField(default=False)
+    canceled = models.BooleanField(default=False)
     user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
     chat = models.ForeignKey(Chat, on_delete=models.CASCADE, null=True)

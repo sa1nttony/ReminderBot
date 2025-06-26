@@ -23,7 +23,8 @@ from utils import (IncorrectFormat,
                    get_timezone_by_location,
                    update_user_tz,
                    edit_task,
-                   get_tasks
+                   get_tasks,
+                   convert_to_user_tz,
                    )
 
 
@@ -32,10 +33,9 @@ tbot = telebot.TeleBot(TOKEN, threaded=True, num_threads=300, parse_mode='HTML')
 #TODO Добавление чата в бд при добавлении бота, добавления юзера в список пользователей чата, при добавлении его в чат, исправить функцию new_task
 @tbot.message_handler(commands=['help'])
 def info(message: telebot.types.Message):
-    text = 'Цель данного бота - напоминать о важных событиях \n \n' \
-    'В личных сообщениях можно задавать напоминания для себя, а в групповых чатах оставлять задания ' \
-    'и напоминания для коллег, друзей или единомышленников \n \n' \
-    'Доступные комманды: \n'
+    text = """Цель бота - напоминать о важных событиях, встречах или просто напомнить о запланированных делах. 
+Список доступных команд:
+"""
     counter = 1
     for c in [*commands]:
         cmnd = f'{counter}. {c} - {commands[c]}\n'
@@ -123,7 +123,7 @@ def start_task(message: telebot.types.Message):
     task_info = {}
     task_info['chat'] = message.chat.id
     task_info['user'] = telegram_id
-    msg = tbot.send_message(message.chat.id, f'Начинаем создание нового задания для @{task_info["user"]}\n'
+    msg = tbot.send_message(message.chat.id, f'Начинаем создание новой задачи для @{task_info["user"]}\n'
                                      f'Укажите короткое описание события. Например "{example_headers[random.randint(0, len(example_headers)-1)]}"')
     task_info['prev_msg'] = (msg.chat.id, msg.id)
     tbot.register_next_step_handler(message, task_header, task_info)
@@ -133,7 +133,7 @@ def task_user(message, task_info):
     task_info['user'] = message.text[1::]
     tbot.delete_message(message.chat.id, message.id)
     tbot.delete_message(message.chat.id, message.id - 1)
-    msg = tbot.send_message(message.chat.id, f'Начинаем создание нового задания для @{task_info["user"]}\n'
+    msg = tbot.send_message(message.chat.id, f'Начинаем создание новой задачи для @{task_info["user"]}\n'
                                              f'Укажите короткое описание события. Например "{example_headers[random.randint(0, len(example_headers) - 1)]}"')
     tbot.register_next_step_handler(msg, task_header, task_info)
 
@@ -163,7 +163,7 @@ _____
     tbot.register_next_step_handler(message, create_task, task_info)
 
 
-def create_task(message, task_info):
+def create_task(message: telebot.types.Message, task_info):
     try:
         tbot.delete_message(message.chat.id, message.id)
         date = validate_datetime(message.text)
@@ -184,7 +184,7 @@ _____
 
 <strong>Название</strong>: <em>{task_info['header']}</em>
 <strong>Описание</strong>: <em>{task_info['description']}</em>
-<strong>Дата и время</strong>: <em>{task_info['date']}</em>
+<strong>Дата и время</strong>: <em>{convert_to_user_tz(task_info['date'], message.from_user.id).strftime("%d.%m.%Y %H:%M")}</em>
     """
         tbot.edit_message_text(message_text, task_info['prev_msg'][0], task_info['prev_msg'][1])
         new_task(task_info['header'], task_info['description'], task_info['date'], task_info['user'])
@@ -216,12 +216,12 @@ def task_details(call):
     markup.add(telebot.types.InlineKeyboardButton(text="📜 Изменить название", callback_data=f"edit_task:{task_id}:header"))
     markup.add(telebot.types.InlineKeyboardButton(text="✏️ Изменить описание", callback_data=f"edit_task:{task_id}:description"))
     markup.add(telebot.types.InlineKeyboardButton(text="📅 Изменить дату и время", callback_data=f"edit_task:{task_id}:date"))
-    markup.add(telebot.types.InlineKeyboardButton(text="❌ Удалить напоминание", callback_data=f"edit_task:{task_id}:complete"))
+    markup.add(telebot.types.InlineKeyboardButton(text="❌ Удалить напоминание", callback_data=f"edit_task:{task_id}:canceled"))
     markup.add(telebot.types.InlineKeyboardButton(text="<< Назад к списку", callback_data=f"back"))
     text = f"""<strong>🗓 Предстоящее событие:</strong>
 <strong>Название</strong>: <em>{task.header}</em>
 <strong>Описание</strong>: <em>{task.description}</em>
-<strong>Дата и время</strong>: <em>{task.date}</em>"""
+<strong>Дата и время</strong>: <em>{convert_to_user_tz(task.date, telegram_id).strftime("%d.%m.%Y %H:%M")}</em>"""
     tbot.edit_message_text(chat_id=telegram_id, message_id=message_id, text=text, reply_markup=markup)
 
 @tbot.callback_query_handler(func=lambda call: call.data.startswith("back"))
@@ -229,25 +229,36 @@ def back_to_tasks(call):
     tbot.delete_message(call.message.chat.id, call.message.message_id)
     send_tasks(call.from_user.id, call.message.chat.id)
 
-######
-######
-#FIXME сделать отдельный вариант для отмены задания, чтобы не пришлось ничего воодить пользователю
-#####
-#####
-#####
+
 @tbot.callback_query_handler(func=lambda call: call.data.startswith("edit_task:"))
 def get_update_task_info(call):
     task_id = call.data.split(":")[1]
     field = call.data.split(":")[2]
     task = Task.objects.get(id=task_id)
-    text = f"""<strong>📝 Изменение события:</strong>
-    <strong>Название</strong>: <em>{task.header}</em>
-    <strong>Описание</strong>: <em>{task.description}</em>
-    <strong>Дата и время</strong>: <em>{task.date}</em>
-_________________
-Отправьте новое значение:"""
-    tbot.edit_message_text(chat_id=call.from_user.id, message_id=call.message.message_id, text=text, reply_markup=None)
-    tbot.register_next_step_handler(call.message, update_task, task_id, field, call.message)
+    if field != 'canceled':
+        text = f"""<strong>📝 Изменение события:</strong>
+        <strong>Название</strong>: <em>{task.header}</em>
+        <strong>Описание</strong>: <em>{task.description}</em>
+        <strong>Дата и время</strong>: <em>{convert_to_user_tz(task.date, call.from_user.id).strftime("%d.%m.%Y %H:%M")}</em>
+    _________________
+    Отправьте новое значение:"""
+        if field == 'date':
+            text = text + f'\n Подсказка: дату и время события вводи в формате {datetime.datetime.now().strftime("%d.%m.%Y %H:%M")}'
+        tbot.edit_message_text(chat_id=call.from_user.id, message_id=call.message.message_id, text=text, reply_markup=None)
+        tbot.register_next_step_handler(call.message, update_task, task_id, field, call.message)
+    else:
+        markup = telebot.types.InlineKeyboardMarkup()
+        markup.add(telebot.types.InlineKeyboardButton(text="✅ Да, удалить", callback_data=f"delete_task:{task_id}:y"))
+        markup.add(telebot.types.InlineKeyboardButton(text="❌ Нет, не удалять", callback_data=f"delete_task:{task_id}:n"))
+        text = f"""<strong>💢✂️ Подтверждение удаления события:</strong>
+                <strong>Название</strong>: <em>{task.header}</em>
+                <strong>Описание</strong>: <em>{task.description}</em>
+                <strong>Дата и время</strong>: <em>{convert_to_user_tz(task.date, call.from_user.id)}</em>
+            _________________
+            Действительно удалить событие ❓"""
+        tbot.edit_message_text(chat_id=call.from_user.id, message_id=call.message.message_id, text=text,
+                               reply_markup=markup)
+
 
 def update_task(message, task_id, field, bot_message):
     edit_task(task_id, field, message.text)
@@ -256,12 +267,73 @@ def update_task(message, task_id, field, bot_message):
     text = f"""<strong>⭐️ Изменения внесены:</strong>
 <strong>Название</strong>: <em>{task.header}</em>
 <strong>Описание</strong>: <em>{task.description}</em>
-<strong>Дата и время</strong>: <em>{task.date}</em>"""
+<strong>Дата и время</strong>: <em>{convert_to_user_tz(task.date, message.from_user.id).strftime("%d.%m.%Y %H:%M")}</em>"""
     tbot.edit_message_text(chat_id=bot_message.chat.id, message_id=bot_message.id, text=text)
 
+
+@tbot.callback_query_handler(func=lambda call: call.data.startswith("delete_task:"))
+def delete_task(call):
+    if call.data.split(":")[2] == 'y':
+        edit_task(call.data.split(":")[1], 'canceled', '')
+        text = '♻️ Событие успешно удалено'
+        tbot.edit_message_text(chat_id=call.from_user.id, message_id=call.message.message_id, text=text, reply_markup=None)
+    else:
+        text = '🌀 Отмена удаления события'
+        tbot.edit_message_text(chat_id=call.from_user.id, message_id=call.message.message_id, text=text, reply_markup=None)
+
+
 #TODO Написать функцию для отправки уведомления
-def send_remind():
-    pass
+def send_remind(task, user):
+    text = f"""<strong>‼️ Наступило время события ‼️:</strong>
+<strong>Название</strong>: <em>{task.header}</em>
+<strong>Описание</strong>: <em>{task.description}</em>
+<strong>Дата и время</strong>: <em>{convert_to_user_tz(task.date, user.telegram_id).strftime("%d.%m.%Y %H:%M")}</em>"""
+    markup = telebot.types.InlineKeyboardMarkup()
+    markup.add(telebot.types.InlineKeyboardButton(text="✅ Завершить", callback_data=f"finish_task:{task.id}"))
+    markup.row(
+        telebot.types.InlineKeyboardButton(text="Перенести: 5 мин.", callback_data=f"move_task:{task.id}:5m"),
+        telebot.types.InlineKeyboardButton(text="Перенести: 10 мин.", callback_data=f"move_task:{task.id}:10m")
+    )
+    markup.row(
+        telebot.types.InlineKeyboardButton(text="Перенести: 15 мин.", callback_data=f"move_task:{task.id}:15m"),
+        telebot.types.InlineKeyboardButton(text="Перенести: 30 мин.", callback_data=f"move_task:{task.id}:30m")
+    )
+    markup.row(
+        telebot.types.InlineKeyboardButton(text="Перенести: 1 час", callback_data=f"move_task:{task.id}:1h"),
+        telebot.types.InlineKeyboardButton(text="Перенести: 3 часа", callback_data=f"move_task:{task.id}:3h")
+    )
+    markup.row(
+        telebot.types.InlineKeyboardButton(text="Перенести: 6 часов", callback_data=f"move_task:{task.id}:6h"),
+        telebot.types.InlineKeyboardButton(text="Перенести: Сутки", callback_data=f"move_task:{task.id}:1d")
+    )
+    tbot.send_message(user.telegram_id, text, reply_markup=markup)
+
+
+@tbot.callback_query_handler(func=lambda call: call.data.startswith("finish_task:"))
+def finish_task(call):
+    task_id = call.data.split(':')[1]
+    edit_task(task_id, "complete", 1)
+    task = Task.objects.get(id=task_id)
+    text = f"""<strong>🎉 Событие завершено:</strong>
+<strong>Название</strong>: <em>{task.header}</em>
+<strong>Описание</strong>: <em>{task.description}</em>
+<strong>Дата и время</strong>: <em>{convert_to_user_tz(task.date, task.user.telegram_id).strftime("%d.%m.%Y %H:%M")}</em>"""
+    tbot.edit_message_text(chat_id=call.from_user.id, message_id=call.message.message_id, text=text, reply_markup=None)
+
+
+@tbot.callback_query_handler(func=lambda call: call.data.startswith("move_task:"))
+def move_task(call):
+    periods = {
+        '5m': datetime.timedelta(minutes=5),
+        '10m': datetime.timedelta(minutes=10),
+        '15m': datetime.timedelta(minutes=15),
+        '30m': datetime.timedelta(minutes=30),
+        '1h': datetime.timedelta(hours=1),
+        '3h': datetime.timedelta(hours=3),
+        '6h': datetime.timedelta(hours=6),
+        '1d': datetime.timedelta(days=1),
+    }
+    #TODO прибавляем время по словарю от call, меняем стандартной функцией изменения таски, отправляем информацию об изменении пользователю
 
 # Работа бота нонстопом, даже при ошибках
 while True:

@@ -64,6 +64,13 @@ def convert_to_utc(datetime_dt: datetime, timezone: str) -> datetime:
     return utc_datetime
 
 
+def convert_to_user_tz(datetime_dt: datetime, telegram_id: int) -> datetime:
+    timezone = User.objects.get(telegram_id=telegram_id).timezone
+    user_datetime = datetime_dt.astimezone(pytz.timezone(timezone))
+    return user_datetime
+
+
+
 def get_timezone_by_location(latitude, longitude):
     tf = TimezoneFinder()
     time_zone_str = tf.timezone_at(lat=latitude, lng=longitude)
@@ -121,7 +128,7 @@ def new_task(header, description, date, telegram_id):
 def get_tasks(telegram_id):
     user = User.objects.get(telegram_id=telegram_id)
     user_tz = pytz.timezone(user.timezone)
-    tasks = Task.objects.filter(user_id=user.id, complete=0).values('header', 'description', 'date', 'id')
+    tasks = Task.objects.filter(user_id=user.id, complete=0, canceled=0).values('header', 'description', 'date', 'id')
     tasks_list = []
     for task in tasks:
         t = {}
@@ -136,7 +143,7 @@ def get_tasks(telegram_id):
 def edit_task(task_id, field, value):
     task = Task.objects.get(id=task_id)
     user = User.objects.get(id=task.user_id)
-    if field != "complete":
+    if field != "canceled":
         if field != 'date':
             setattr(task, field, value)
             task.save()
@@ -151,7 +158,10 @@ def edit_task(task_id, field, value):
 
 #Testing
 if __name__ == '__main__':
-    edit_task(2, "header", 'Совещание с лягушками')
+    datetime_test = Task.objects.get(id=2).date
+    tz = User.objects.get(id=3).timezone
+    print(convert_to_user_tz(datetime_test, tz))
+    # edit_task(2, "header", 'Совещание с лягушками')
     #print(get_tasks(268699254))
     # print(convert_to_utc(datetime.datetime.now(), 'Asia/Yekaterinburg'))
     # add_new_user("test", "test2")
