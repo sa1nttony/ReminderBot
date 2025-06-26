@@ -1,6 +1,6 @@
 /Old
 /.idea
-/__pycache__
+**/__pycache__/
 /new_venv
 /venv_mac
 /ReminderBot/ReminderBot/__pycache__
