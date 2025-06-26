@@ -59,7 +59,6 @@ def validate_datetime(datetime_str: str) -> datetime:
 #timezone: str - user timezone string (example 'Asia/Yekaterinburg')
 def convert_to_utc(datetime_dt: datetime, timezone: str) -> datetime:
     user_tz = pytz.timezone(timezone)
-
     user_datetime = user_tz.localize(datetime_dt)
     utc_datetime = user_datetime.astimezone(pytz.UTC)
     return utc_datetime
@@ -101,26 +100,61 @@ def user_exist(username):
         return True
 
 
-def get_account(username):
-    user = User.objects.filter(username=username).values('username', 'password')[0]
+def get_account(telegram_id):
+    user = User.objects.filter(telegram_id=telegram_id).values('username', 'password')[0]
     account = {'username': user['username'], 'password': user['password']}
     return account
 
 
-def new_password(username):
-    user = User.objects.get(username=username)
+def new_password(telegram_id):
+    user = User.objects.get(telegram_id=telegram_id)
     user.password = generate_code()
     user.save()
 
 
-def new_task(header, description, date, username):
-    user = User.objects.get(username=username)
-    Task.objects.create(header=header, description=description, date=date, user=user)
+def new_task(header, description, date, telegram_id):
+    user = User.objects.get(telegram_id=telegram_id)
+    date_utc = convert_to_utc(date, user.timezone)
+    Task.objects.create(header=header, description=description, date=date_utc, user=user)
 
+
+def get_tasks(telegram_id):
+    user = User.objects.get(telegram_id=telegram_id)
+    user_tz = pytz.timezone(user.timezone)
+    tasks = Task.objects.filter(user_id=user.id, complete=0).values('header', 'description', 'date', 'id')
+    tasks_list = []
+    for task in tasks:
+        t = {}
+        t['header'] = task['header']
+        t['description'] = task['description']
+        date = task['date'].astimezone(user_tz)
+        t['date'] = date
+        t['id'] = task['id']
+        tasks_list.append(t)
+    return tasks_list
+
+def edit_task(task_id, field, value):
+    task = Task.objects.get(id=task_id)
+    user = User.objects.get(id=task.user_id)
+    if field != "complete":
+        if field != 'date':
+            setattr(task, field, value)
+            task.save()
+        else:
+            date_obj = validate_datetime(value)
+            date_utc = convert_to_utc(date_obj, user.timezone)
+            task.date = date_utc
+            task.save()
+    else:
+        setattr(task, field, 1)
+        task.save()
 
 #Testing
 if __name__ == '__main__':
-    add_new_user("test", "test2")
+    edit_task(2, "header", 'Совещание с лягушками')
+    #print(get_tasks(268699254))
+    # print(convert_to_utc(datetime.datetime.now(), 'Asia/Yekaterinburg'))
+    # add_new_user("test", "test2")
     # a = get_account('sa1nttony')
     # print(a['username'], a['password'])
     # new_password(a['username'])

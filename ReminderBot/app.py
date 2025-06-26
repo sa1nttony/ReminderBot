@@ -3,14 +3,14 @@ import datetime
 import random
 import os
 import django
+import time
 
 os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'ReminderBot.settings')
 django.setup()
 
 from config import TOKEN
 from phrases import commands, example_headers, example_descriptions, hints
-from bot.models import Chat, ChatUser, Task
-# from DB.handler_db import new_user, new_task, get_user_id, update_user
+from bot.models import Chat, ChatUser, Task, User
 from utils import (IncorrectFormat,
                    TimePassed,
                    UserAlreadyExist,
@@ -22,6 +22,8 @@ from utils import (IncorrectFormat,
                    validate_datetime,
                    get_timezone_by_location,
                    update_user_tz,
+                   edit_task,
+                   get_tasks
                    )
 
 
@@ -30,7 +32,7 @@ tbot = telebot.TeleBot(TOKEN, threaded=True, num_threads=300, parse_mode='HTML')
 #TODO Добавление чата в бд при добавлении бота, добавления юзера в список пользователей чата, при добавлении его в чат, исправить функцию new_task
 @tbot.message_handler(commands=['help'])
 def info(message: telebot.types.Message):
-    text = 'Цель данного бота - напоминать о важных событиях как одного человека, так и группы людей. \n \n' \
+    text = 'Цель данного бота - напоминать о важных событиях \n \n' \
     'В личных сообщениях можно задавать напоминания для себя, а в групповых чатах оставлять задания ' \
     'и напоминания для коллег, друзей или единомышленников \n \n' \
     'Доступные комманды: \n'
@@ -40,27 +42,6 @@ def info(message: telebot.types.Message):
         text = text + cmnd
         counter += 1
     tbot.reply_to(message, text)
-
-
-# # @tbot.message_handler(content_types=['new_chat_members'])
-# @tbot.message_handler(commands=['/init'])
-# def register_member(message: telebot.types.Message):
-#     firstname = message.json['new_chat_member']['first_name']
-#     username = message.json['new_chat_member']['username']
-#     user_id = message.json['new_chat_member']['id']
-#     chat_id = message.chat.id
-#     if user_id != tbot.user.id:
-#         try:
-#             add_new_user(firstname, username)
-#         except UserAlreadyExist as e:
-#             tbot.reply_to(message, f'Привет, @{username}! Мы с тобой уже знакомы. Если забыл пароль или логин - напиши мне в личные сообщения команду /my_account')
-#         else:
-#             tbot.reply_to(message,
-#                          f'Пользователь @{username} успешно зарегистрирован. '
-#                          f'Чтобы узнать логин и пароль - напиши мне в личные сообщения(@{tbot.user.username}) команду /my_account')
-#     else:
-#         tbot.send_message(chat_id, 'Привет! Я бот, созданный для того, чтобы напоминать о чем-либо. '
-#                                    '\nОтправь команду /help, чтобы узнать больше о моих способностях')
 
 
 @tbot.message_handler(commands=['start'])
@@ -76,8 +57,24 @@ def register_user(message: telebot.types.Message):
         self_message = f"""Вы успешно зарегистрированы! \nВаш логин <strong>{username}</strong> 
         Ваш пароль <span class="tg-spoiler"><strong>{password}</strong></span>"""
         tbot.reply_to(message, self_message, parse_mode='HTML')
-    #TODO Добавить следующий шаг по добавлению таймзоны
-    #TODO Добавить команду обновления таймзоны
+        get_user_tz(message)
+
+
+def get_user_tz(message):
+    text = """Для того, чтобы напоминания были актуальны по времени, отправь мне свою геопозицию. 🌍
+Благодаря ней я смогу вычислить твой часовой пояс"""
+    markup = telebot.types.ReplyKeyboardMarkup(one_time_keyboard=True, resize_keyboard=True)
+    button = telebot.types.KeyboardButton('Отправить местоположение', request_location=True)
+    markup.add(button)
+    tbot.send_message(message.chat.id, text, reply_markup=markup)
+
+
+@tbot.message_handler(commands=['tz'])
+def change_user_tz(message: telebot.types.Message):
+    user_tz = User.objects.get(telegram_id=message.from_user.id).timezone
+    text = f"Твой текущий часовой пояс - {user_tz}"
+    tbot.send_message(message.chat.id, text)
+    get_user_tz(message)
 
 
 @tbot.message_handler(commands=['my_account'])
@@ -103,8 +100,8 @@ def change_password(message: telebot.types.Message):
         tbot.reply_to(message, f'Эту команду лучше написать мне в личные сообщения @{tbot.user.username}, '
                                f'ты ведь не хочешь, чтобы весь чат увидел твой новый пароль?')
     else:
-        new_password(username)
-        account = get_account(username)
+        new_password(user_id)
+        account = get_account(user_id)
         tbot.reply_to(message, f"""Пароль успешно изменен\nВаш логин <strong>{account['username']}</strong>\nВаш пароль <span class="tg-spoiler"><strong>{account['password']}</strong></span>""",
                       parse_mode='HTML')
 
@@ -115,14 +112,18 @@ def get_location(message: telebot.types.Message):
     longitude = message.location.longitude
     tz = get_timezone_by_location(longitude=longitude, latitude=latitude)
     update_user_tz(tz, str(message.from_user.id))
+    text = f"Твой часовой пояс - {str(tz)}"
+    markup = telebot.types.ReplyKeyboardRemove()
+    tbot.send_message(message.chat.id, text, reply_markup=markup)
 
 
 #Блок создания задания
 @tbot.message_handler(commands=['new_task'])
 def start_task(message: telebot.types.Message):
-    username = message.from_user.username
-    task_info = {'chat': message.chat.id}
-    task_info['user'] = username
+    telegram_id = message.from_user.id
+    task_info = {}
+    task_info['chat'] = message.chat.id
+    task_info['user'] = telegram_id
     msg = tbot.send_message(message.chat.id, f'Начинаем создание нового задания для @{task_info["user"]}\n'
                                      f'Укажите короткое описание события. Например "{example_headers[random.randint(0, len(example_headers)-1)]}"')
     task_info['prev_msg'] = (msg.chat.id, msg.id)
@@ -184,113 +185,82 @@ _____
 
 <strong>Название</strong>: <em>{task_info['header']}</em>
 <strong>Описание</strong>: <em>{task_info['description']}</em>
-<strong>Дата и время</strong>: <em>{task_info['date']}</em>\n
+<strong>Дата и время</strong>: <em>{task_info['date']}</em>
     """
         tbot.edit_message_text(message_text, task_info['prev_msg'][0], task_info['prev_msg'][1])
         new_task(task_info['header'], task_info['description'], task_info['date'], task_info['user'])
 
 
-# @bot.message_handler(commands=['admin'])
-# def create_superuser(message: telebot.types.Message):
-#     username = message.from_user.username
-#     chat_id = message.chat.id
-#     user_id = get_user_id(username, chat_id)[0][0]
-#     update_user(user_id, 'is_superuser', 1)
-#     text = f'{message.from_user.first_name} теперь может давать задания другим пользователям чата'
-#     bot.reply_to(message, text)
-#
-#
-# #Блок создания задания
-# @bot.message_handler(commands=['new_task'])
-# def start_new_task(message: telebot.types.Message):
-#     start_message = message
-#     task = Task()
-#     msg = bot.send_message(message.chat.id,
-#                            f'Укажите короткое описание события. Например "{example_headers[random.randint(0, len(example_headers)-1)]}"')
-#     bot.register_next_step_handler(msg, task_header, task, start_message)
-#
-#
-# def task_header(message, task, start_message):
-#     task.get_header = message.text
-#     msg = bot.send_message(message.chat.id,
-#                            f'Укажите более подробное описание события. Например "{example_descriptions[random.randint(0, len(example_headers)-1)]}"')
-#     bot.register_next_step_handler(msg, task_date, task, start_message)
-#
-#
-# def task_date(message, task, start_message):
-#     task.get_description = message.text
-#     msg = bot.send_message(message.chat.id, f'Укажите дату события в формате "ДД ММ ГГГГ". Например "{datetime.date.today().strftime("%d %m %Y")}"')
-#     bot.register_next_step_handler(msg, task_time, task, start_message)
-#
-#
-# def task_time(message, task, start_message):
-#     try:
-#         task.get_date = message.text
-#     except Exception as e:
-#         msg = bot.send_message(message.chat.id,
-#                                f'{e}\nУкажите дату события в формате "ДД ММ ГГГГ". Например "{datetime.date.today().strftime("%d %m %Y")}"')
-#         bot.register_next_step_handler(msg, task_time, task, start_message)
-#     else:
-#         msg = bot.send_message(message.chat.id,
-#                                f'Укажите время события в формате "ЧЧ:ММ". Например "{datetime.datetime.now().strftime("%H:%M")}"')
-#         bot.register_next_step_handler(msg, task_user, task, start_message)
-#
-#
-# def task_user(message, task, start_message):
-#     try:
-#         task.get_time = message.text
-#     except Exception as e:
-#         msg = bot.send_message(message.chat.id,
-#                                f'{e}\nУкажите время события в формате "ЧЧ:ММ". Например "{datetime.datetime.now().strftime("%H:%M")}"')
-#         bot.register_next_step_handler(msg, task_user, task, start_message)
-#     else:
-#         if user_exist(start_message.from_user.username, message.chat.id):
-#             task.get_creator_id = get_user_id(start_message.from_user.username, message.chat.id)[0][0]
-#             if start_message.from_user.id == message.chat.id:
-#                 task.get_user_id = task.get_creator_id
-#                 task_commit(start_message, task)
-#             else:
-#                 msg = bot.send_message(message.chat.id,
-#                                        f'Укажите пользователя, для которого нужно назначить задание. Например @{start_message.from_user.username}')
-#                 bot.register_next_step_handler(msg, task_commit, task)
-#         else:
-#             bot.send_message(message.chat.id, f'Пользователь {start_message.from_user.username} не был инициализирован. \n'
-#                                               f'Для инициализации, пользователь должен отправить команду /init')
-#
-#
-# def task_commit(message, task, attempt=0):
-#     if not task.get_user_id:
-#         if user_exist(message.text.replace('@', ''), message.chat.id):
-#             task.get_user_id = get_user_id(message.text.replace('@', ''), message.chat.id)[0][0]
-#             try:
-#                 task.db_export()
-#             except Exception as e:
-#                 msg = f'{e}\n'
-#                 for hint in hints:
-#                     msg = msg + hint
-#                 bot.send_message(message.chat.id, msg)
-#             else:
-#                 bot.send_message(message.chat.id, task)
-#         else:
-#             attempt += 1
-#             if attempt > 3:
-#                 bot.send_message(message.chat.id, 'Создание события отменено из-за превышения числа неудачных попыток')
-#                 return None
-#             msg = bot.send_message(message.chat.id,
-#                                    f'Пользователь {message.text} не существует, либо он не инициализирован. \n'
-#                                    f'Для инициализации пользователю {message.text} необходимо отправить в чат команду \n/init\n'
-#                                    f'Укажите пользователя, для которого нужно назначить задание. Например @{message.from_user.username}')
-#             bot.register_next_step_handler(msg, task_commit, task, attempt)
-#     else:
-#         task.db_export()
-#         bot.send_message(message.chat.id, task)
+#Блок изменения напоминаний
+def send_tasks(telegram_id, chat_id):
+    markup = telebot.types.InlineKeyboardMarkup()
+    tasks = get_tasks(telegram_id)
+    for task in tasks:
+        button = telebot.types.InlineKeyboardButton(text=task['header'], callback_data=f"show_task:{task['id']}")
+        markup.add(button)
+    tbot.send_message(chat_id, "Выбери напоминание:", reply_markup=markup)
 
 
-#TODO Добавить функцию добавления таски, универсальную для себя или для другого пользователя - готово
-#TODO Добавить функцию редактирования таски. Возможно, потребуется добавить поле "creator_id"
-# которая будет использовваться для защиты от изменения таски другими пользователями
+@tbot.message_handler(commands=['show_tasks'])
+def show_tasks(message: telebot.types.Message):
+    send_tasks(message.from_user.id, message.chat.id)
 
-#TODO Протестировать создание таски от неинициализированного пользователя
-#TODO Протестировать добавление таски для неинициализированного пользователя
 
-tbot.polling(none_stop=True)
+#Callback handler
+@tbot.callback_query_handler(func=lambda call: call.data.startswith("show_task:"))
+def task_details(call):
+    task_id = call.data.split(":")[1]
+    message_id = call.message.message_id
+    telegram_id = call.from_user.id
+    markup = telebot.types.InlineKeyboardMarkup()
+    task = Task.objects.get(id=task_id)
+    markup.add(telebot.types.InlineKeyboardButton(text="📜 Изменить название", callback_data=f"edit_task:{task_id}:header"))
+    markup.add(telebot.types.InlineKeyboardButton(text="✏️ Изменить описание", callback_data=f"edit_task:{task_id}:description"))
+    markup.add(telebot.types.InlineKeyboardButton(text="📅 Изменить дату и время", callback_data=f"edit_task:{task_id}:date"))
+    markup.add(telebot.types.InlineKeyboardButton(text="❌ Удалить напоминание", callback_data=f"edit_task:{task_id}:complete"))
+    markup.add(telebot.types.InlineKeyboardButton(text="<< Назад к списку", callback_data=f"back"))
+    text = f"""<strong>🗓 Предстоящее событие:</strong>
+<strong>Название</strong>: <em>{task.header}</em>
+<strong>Описание</strong>: <em>{task.description}</em>
+<strong>Дата и время</strong>: <em>{task.date}</em>"""
+    tbot.edit_message_text(chat_id=telegram_id, message_id=message_id, text=text, reply_markup=markup)
+
+@tbot.callback_query_handler(func=lambda call: call.data.startswith("back"))
+def back_to_tasks(call):
+    tbot.delete_message(call.message.chat.id, call.message.message_id)
+    send_tasks(call.from_user.id, call.message.chat.id)
+
+
+@tbot.callback_query_handler(func=lambda call: call.data.startswith("edit_task:"))
+def get_update_task_info(call):
+    task_id = call.data.split(":")[1]
+    field = call.data.split(":")[2]
+    task = Task.objects.get(id=task_id)
+    text = f"""<strong>📝 Изменение события:</strong>
+    <strong>Название</strong>: <em>{task.header}</em>
+    <strong>Описание</strong>: <em>{task.description}</em>
+    <strong>Дата и время</strong>: <em>{task.date}</em>
+_________________
+Отправьте новое значение:"""
+    tbot.edit_message_text(chat_id=call.from_user.id, message_id=call.message.message_id, text=text, reply_markup=None)
+    tbot.register_next_step_handler(call.message, update_task, task_id, field, call.message)
+
+def update_task(message, task_id, field, bot_message):
+    edit_task(task_id, field, message.text)
+    task = Task.objects.get(id=task_id)
+    tbot.delete_message(message.chat.id, message.id)
+    text = f"""<strong>⭐️ Изменения внесены:</strong>
+<strong>Название</strong>: <em>{task.header}</em>
+<strong>Описание</strong>: <em>{task.description}</em>
+<strong>Дата и время</strong>: <em>{task.date}</em>"""
+    tbot.edit_message_text(chat_id=bot_message.chat.id, message_id=bot_message.id, text=text)
+
+
+#Работа бота нонстопом, даже при ошибках
+while True:
+    try:
+        tbot.polling(none_stop=True)
+    except Exception as e:
+        print(f"Ошибка polling: {e}")
+        time.sleep(1)
+
