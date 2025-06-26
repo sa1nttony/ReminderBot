@@ -93,7 +93,6 @@ def my_account(message: telebot.types.Message):
 
 @tbot.message_handler(commands=['change_password'])
 def change_password(message: telebot.types.Message):
-    username = message.from_user.username
     user_id = message.from_user.id
     chat_id = message.chat.id
     if user_id != chat_id:
@@ -230,7 +229,12 @@ def back_to_tasks(call):
     tbot.delete_message(call.message.chat.id, call.message.message_id)
     send_tasks(call.from_user.id, call.message.chat.id)
 
-
+######
+######
+#FIXME сделать отдельный вариант для отмены задания, чтобы не пришлось ничего воодить пользователю
+#####
+#####
+#####
 @tbot.callback_query_handler(func=lambda call: call.data.startswith("edit_task:"))
 def get_update_task_info(call):
     task_id = call.data.split(":")[1]
@@ -255,12 +259,14 @@ def update_task(message, task_id, field, bot_message):
 <strong>Дата и время</strong>: <em>{task.date}</em>"""
     tbot.edit_message_text(chat_id=bot_message.chat.id, message_id=bot_message.id, text=text)
 
+#TODO Написать функцию для отправки уведомления
+def send_remind():
+    pass
 
-#Работа бота нонстопом, даже при ошибках
+# Работа бота нонстопом, даже при ошибках
 while True:
     try:
         tbot.polling(none_stop=True)
     except Exception as e:
         print(f"Ошибка polling: {e}")
         time.sleep(1)
-
