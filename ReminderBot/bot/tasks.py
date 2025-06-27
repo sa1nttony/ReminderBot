@@ -1,7 +1,8 @@
 from celery import shared_task
 
-from models import User, Task
+
+from ReminderBot.app import send_remind
 
 @shared_task
-def send_reminder(user_id, task_id):
-    pass
+def send_reminder(user, task):
+    send_remind(task, user)

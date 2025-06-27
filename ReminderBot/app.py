@@ -282,7 +282,6 @@ def delete_task(call):
         tbot.edit_message_text(chat_id=call.from_user.id, message_id=call.message.message_id, text=text, reply_markup=None)
 
 
-#TODO Написать функцию для отправки уведомления
 def send_remind(task, user):
     text = f"""<strong>‼️ Наступило время события ‼️:</strong>
 <strong>Название</strong>: <em>{task.header}</em>
@@ -333,9 +332,17 @@ def move_task(call):
         '6h': datetime.timedelta(hours=6),
         '1d': datetime.timedelta(days=1),
     }
-    #TODO прибавляем время по словарю от call, меняем стандартной функцией изменения таски, отправляем информацию об изменении пользователю
+    task = Task.objects.get(id=call.data.split(":")[1])
+    new_date = task.date + periods[call.data.split(':')[2]]
+    edit_task(task.id, "date", new_date)
+    text = f"""<strong>➡️📅 Событие перенесено:</strong>
+<strong>Название</strong>: <em>{task.header}</em>
+<strong>Описание</strong>: <em>{task.description}</em>
+<strong>Дата и время</strong>: <em>{convert_to_user_tz(task.date, task.user.telegram_id).strftime("%d.%m.%Y %H:%M")}</em>"""
+    tbot.edit_message_text(chat_id=call.from_user.id, message_id=call.message.message_id, text=text, reply_markup=None)
 
-# Работа бота нонстопом, даже при ошибках
+
+# Bot non-stop working
 while True:
     try:
         tbot.polling(none_stop=True)
