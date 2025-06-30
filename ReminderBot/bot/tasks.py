@@ -1,7 +1,7 @@
 from celery import shared_task
 
 
-from ReminderBot.app import send_remind
+from telegram_bot.app import send_remind
 
 @shared_task
 def send_reminder(user, task):
