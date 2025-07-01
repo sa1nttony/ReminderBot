@@ -158,8 +158,6 @@ def add_new_user(firstname, username, telegram_id):
 
 def update_user_tz(timezone: str, telegram_id: str):
     user = request_user('telegram_id', telegram_id)
-    user.timezone = timezone
-    user.save()
 
 
 def user_exist(telegram_id):
