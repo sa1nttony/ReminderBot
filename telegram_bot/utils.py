@@ -8,13 +8,6 @@ import json
 
 from timezonefinder import TimezoneFinder
 
-os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'ReminderBot.settings')
-django.setup()
-
-# from bot.models import Task, Chat
-from django.contrib.auth import get_user_model
-User = get_user_model()
-
 #Exceptions
 class ReminderBotException(Exception):
     pass
@@ -47,7 +40,7 @@ BASE = "http://localhost:8000/api"
 
 #user
 def request_user(field, value):
-    user = requests.get(f"{BASE}/user/{field}={value}").json()[0]
+    user = requests.get(f"{BASE}/users/?{field}={value}").json()[0]
     return user
 
 
@@ -72,7 +65,7 @@ def request_user_update(id, field, value):
 
 #Task
 def request_task(field, value):
-    tasks = requests.get(f"{BASE}/tasks/{field}={value}&complete=0&canceled=0").json()
+    tasks = requests.get(f"{BASE}/tasks/?{field}={value}&complete=0&canceled=0").json()
     return tasks
 
 
@@ -89,8 +82,17 @@ def request_tasks_create(header, description, date, telegram_id):
     request = requests.post(url, body)
     return request.json()
 
-#Functions
 
+def request_tasks_update(id, field, value):
+    url = f"{BASE}/tasks/{id}"
+    body = {
+        field: value
+    }
+    request = requests.patch(url, body)
+    return request.json()
+
+
+#Functions
 #Check and convert date and time to correct datetime object
 #datetime_str - str format %d.%m.%Y %H:%M
 def validate_datetime(datetime_str: str) -> datetime:
@@ -105,6 +107,13 @@ def validate_datetime(datetime_str: str) -> datetime:
             else:
                 return date_time
 
+def convert_datetime_for_request(datetime_obj: datetime):
+    date_time_str = datetime.datetime.strftime(datetime_obj, '%Y-%m-%dT%H:%M:%SZ')
+    return date_time_str
+
+def convert_datetime_for_obj(datetime_str: str):
+    date_time_obj = datetime.datetime.strptime(datetime_str, '%Y-%m-%dT%H:%M:%SZ')
+    return date_time_obj
 
 #Convert user local datetime to UTC
 #datetime_dt: datetime - user local datetime object
@@ -116,9 +125,10 @@ def convert_to_utc(datetime_dt: datetime, timezone: str) -> datetime:
     return utc_datetime
 
 
-def convert_to_user_tz(datetime_dt: datetime, telegram_id: int) -> datetime:
+def convert_to_user_tz(datetime_dt: datetime, telegram_id: int, entry_timezone_utc=True) -> datetime:
     timezone = request_user('telegram_id', telegram_id)['timezone']
-    user_datetime = datetime_dt.astimezone(pytz.timezone(timezone))
+    entry_timezone = 'UTC' if entry_timezone_utc else timezone
+    user_datetime = convert_to_utc(datetime_dt, entry_timezone).astimezone(pytz.timezone(timezone))
     return user_datetime
 
 
@@ -165,47 +175,46 @@ def new_password(telegram_id):
 
 def new_task(header, description, date, telegram_id):
     user = request_user('telegram_id', telegram_id)
-    date_utc = convert_to_utc(date, user.timezone)
+    date_utc = convert_to_utc(date, user['timezone'])
     request_tasks_create(header=header, description=description, date=date_utc, telegram_id=telegram_id)
 
 
 def get_tasks(telegram_id):
-    tasks = request_task('telegram_id', telegram_id)
     user = request_user('telegram_id', telegram_id)
+    tasks = request_task('user_id', user['id'])
     tasks_list = []
     for task in tasks:
         t = {}
         t['header'] = task['header']
         t['description'] = task['description']
-        date = task['date'].astimezone(user['timezone'])
+        date = convert_datetime_for_obj(task['date']).astimezone(pytz.timezone(user['timezone']))
         t['date'] = date
         t['id'] = task['id']
         tasks_list.append(t)
     return tasks_list
 
 
-#TODO Закончить функцию
 def edit_task(task_id, field, value):
-    task = request_task('id', task_id)
+    task = request_task('id', task_id)[0]
     user = request_user('id',task['user'])
     if field != "canceled":
         if field != 'date':
-            setattr(task, field, value)
-            task.save()
+            request_tasks_update(task_id, field, value)
         else:
             date_obj = validate_datetime(value)
-            date_utc = convert_to_utc(date_obj, user.timezone)
-            task.date = date_utc
-            task.save()
+            date_utc = convert_to_utc(date_obj, user['timezone'])
+            request_tasks_update(task_id, field, date_utc)
     else:
-        setattr(task, field, 1)
-        task.save()
+        request_tasks_update(task_id, field, 1)
 
 #Testing
 if __name__ == '__main__':
-    datetime_test = Task.objects.get(id=2).date
-    tz = User.objects.get(id=3).timezone
-    print(convert_to_user_tz(datetime_test, tz))
+    date = convert_datetime_for_obj('2025-06-27T13:40:00Z')
+    print(convert_to_user_tz(date, 268699254).strftime('%d.%m.%Y %H:%M'))
+
+    # datetime_test = Task.objects.get(id=2).date
+    # tz = User.objects.get(id=3).timezone
+    # print(convert_to_user_tz(datetime_test, tz))
     # edit_task(2, "header", 'Совещание с лягушками')
     #print(get_tasks(268699254))
     # print(convert_to_utc(datetime.datetime.now(), 'Asia/Yekaterinburg'))
