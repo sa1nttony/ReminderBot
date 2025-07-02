@@ -1,0 +1,55 @@
+version: '3.8'
+
+services:
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+
+  web:
+    build: .
+    environment:
+      FLASK_HOST: flask_listener
+      FLASK_PORT: 5005
+    command: >
+        bash -c "python ReminderBot/manage.py migrate &&
+               python ReminderBot/manage.py runserver 0.0.0.0:8000"
+    volumes:
+      - .:/app
+    ports:
+      - "8000:8000"
+    depends_on:
+      - redis
+
+  celery:
+    build: .
+    command: celery -A ReminderBot.celery_scheduler worker --loglevel=info
+    volumes:
+      - .:/app
+    depends_on:
+      - redis
+      - web
+
+  bot:
+    build: .
+    environment:
+      DJANGO_HOST: web
+      DJANGO_PORT: 8000
+    command: python telegram_bot/app.py
+    volumes:
+      - .:/app
+    depends_on:
+      - web
+
+  flask_listener:
+    build: .
+    environment:
+      DJANGO_HOST: web
+      DJANGO_PORT: 8000
+    command: python telegram_bot/listener.py
+    volumes:
+      - .:/app
+    ports:
+      - "5005:5005"
+    depends_on:
+      - web

@@ -36,7 +36,10 @@ class IncorrectFormat(ReminderBotException):
 #request
 
 #Base URL
-BASE = "http://localhost:8000/api"
+host = os.getenv('DJANGO_HOST', 'localhost')
+port = os.getenv('DJANGO_PORT', '8000')
+
+BASE = f"http://{host}:{port}/api"
 
 #user
 def request_user(field, value):
@@ -88,9 +91,8 @@ def request_tasks_update(id, field, value):
     body = {
         field: value
     }
-    request = requests.patch(url, body)
-    return request.json()
-
+    response = requests.patch(url, json=body)
+    return response.json()
 
 #Functions
 #Check and convert date and time to correct datetime object
@@ -201,15 +203,15 @@ def edit_task(task_id, field, value):
         else:
             date_obj = validate_datetime(value)
             date_utc = convert_to_utc(date_obj, user['timezone'])
-            request_tasks_update(task_id, field, date_utc)
+            request_tasks_update(task_id, field, convert_datetime_for_request(date_utc))
     else:
         request_tasks_update(task_id, field, 1)
 
 #Testing
 if __name__ == '__main__':
-    date = convert_datetime_for_obj('2025-06-27T13:40:00Z')
-    print(convert_to_user_tz(date, 268699254).strftime('%d.%m.%Y %H:%M'))
-
+    # date = convert_datetime_for_obj('2025-06-27T13:40:00Z')
+    # print(convert_to_user_tz(date, 268699254).strftime('%d.%m.%Y %H:%M'))
+    print(edit_task(3, 'date', '04.07.2025 04:28'))
     # datetime_test = Task.objects.get(id=2).date
     # tz = User.objects.get(id=3).timezone
     # print(convert_to_user_tz(datetime_test, tz))
