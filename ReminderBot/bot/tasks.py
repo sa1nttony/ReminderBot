@@ -1,8 +1,7 @@
+import requests
 from celery import shared_task
-
-
-from telegram_bot.app import send_remind
 
 @shared_task
 def send_reminder(user, task):
-    send_remind(task, user)
+    url = "http://localhost:5005/send_remind"
+    requests.post(url, json={'user': user, 'task': task})

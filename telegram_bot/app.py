@@ -297,22 +297,22 @@ def send_remind(task, user):
 <strong>Описание</strong>: <em>{task['description']}</em>
 <strong>Дата и время</strong>: <em>{convert_to_user_tz(convert_datetime_for_obj(task['date']), user['telegram_id']).strftime("%d.%m.%Y %H:%M")}</em>"""
     markup = telebot.types.InlineKeyboardMarkup()
-    markup.add(telebot.types.InlineKeyboardButton(text="✅ Завершить", callback_data=f"finish_task:{task.id}"))
+    markup.add(telebot.types.InlineKeyboardButton(text="✅ Завершить", callback_data=f"finish_task:{task['id']}"))
     markup.row(
-        telebot.types.InlineKeyboardButton(text="Перенести: 5 мин.", callback_data=f"move_task:{task.id}:5m"),
-        telebot.types.InlineKeyboardButton(text="Перенести: 10 мин.", callback_data=f"move_task:{task.id}:10m")
+        telebot.types.InlineKeyboardButton(text="Перенести: 5 мин.", callback_data=f"move_task:{task['id']}:5m"),
+        telebot.types.InlineKeyboardButton(text="Перенести: 10 мин.", callback_data=f"move_task:{task['id']}:10m")
     )
     markup.row(
-        telebot.types.InlineKeyboardButton(text="Перенести: 15 мин.", callback_data=f"move_task:{task.id}:15m"),
-        telebot.types.InlineKeyboardButton(text="Перенести: 30 мин.", callback_data=f"move_task:{task.id}:30m")
+        telebot.types.InlineKeyboardButton(text="Перенести: 15 мин.", callback_data=f"move_task:{task['id']}:15m"),
+        telebot.types.InlineKeyboardButton(text="Перенести: 30 мин.", callback_data=f"move_task:{task['id']}:30m")
     )
     markup.row(
-        telebot.types.InlineKeyboardButton(text="Перенести: 1 час", callback_data=f"move_task:{task.id}:1h"),
-        telebot.types.InlineKeyboardButton(text="Перенести: 3 часа", callback_data=f"move_task:{task.id}:3h")
+        telebot.types.InlineKeyboardButton(text="Перенести: 1 час", callback_data=f"move_task:{task['id']}:1h"),
+        telebot.types.InlineKeyboardButton(text="Перенести: 3 часа", callback_data=f"move_task:{task['id']}:3h")
     )
     markup.row(
-        telebot.types.InlineKeyboardButton(text="Перенести: 6 часов", callback_data=f"move_task:{task.id}:6h"),
-        telebot.types.InlineKeyboardButton(text="Перенести: Сутки", callback_data=f"move_task:{task.id}:1d")
+        telebot.types.InlineKeyboardButton(text="Перенести: 6 часов", callback_data=f"move_task:{task['id']}:6h"),
+        telebot.types.InlineKeyboardButton(text="Перенести: Сутки", callback_data=f"move_task:{task['id']}:1d")
     )
     tbot.send_message(user.telegram_id, text, reply_markup=markup)
 
@@ -320,8 +320,8 @@ def send_remind(task, user):
 @tbot.callback_query_handler(func=lambda call: call.data.startswith("finish_task:"))
 def finish_task(call):
     task_id = call.data.split(':')[1]
-    edit_task(task_id, "complete", 1)
     task = request_task('id', task_id)[0]
+    edit_task(task_id, "complete", 1)
     text = f"""<strong>🎉 Событие завершено:</strong>
 <strong>Название</strong>: <em>{task['header']}</em>
 <strong>Описание</strong>: <em>{task['description']}</em>
@@ -342,8 +342,8 @@ def move_task(call):
         '1d': datetime.timedelta(days=1),
     }
     task = request_task('id', call.data.split(":")[1])
-    new_date = task.date + periods[call.data.split(':')[2]]
-    edit_task(task.id, "date", new_date)
+    new_date = task['date'] + periods[call.data.split(':')[2]]
+    edit_task(task['id'], "date", new_date)
     text = f"""<strong>➡️📅 Событие перенесено:</strong>
 <strong>Название</strong>: <em>{task['header']}</em>
 <strong>Описание</strong>: <em>{task['description']}</em>
@@ -352,10 +352,11 @@ def move_task(call):
 
 
 # Bot non-stop working
-# while True:
-#     try:
-#         tbot.polling(none_stop=True)
-#     except Exception as e:
-#         print(f"Ошибка polling: {e}")
-#         time.sleep(1)
-tbot.polling(none_stop=True)
+while True:
+    try:
+        tbot.polling(none_stop=True)
+    except Exception as e:
+        print(f"Ошибка polling: {e}")
+        time.sleep(1)
+
+# tbot.polling(none_stop=True)

@@ -7,7 +7,7 @@ from django.views.decorators.http import condition
 from django_lifecycle import hook, AFTER_CREATE, AFTER_UPDATE, LifecycleModelMixin
 from django_lifecycle.conditions import WhenFieldHasChanged
 
-# from .tasks import send_reminder
+from .tasks import send_reminder
 
 
 # Create your models here.
@@ -53,29 +53,29 @@ class Task(LifecycleModelMixin, models.Model):
     @hook(AFTER_CREATE)
     def create_scheduler(self):
         pass
-        # res = send_reminder.apply_async(
-        #     args=[self.user, self],
-        #     eta=self.date
-        # )
-        # self.celery_task = res.id
-        # self.save(update_fields=['celery_task'])
+        res = send_reminder.apply_async(
+            args=[self.user, self],
+            eta=self.date
+        )
+        self.celery_task = res.id
+        self.save(update_fields=['celery_task'])
 
     @hook(AFTER_UPDATE, condition=WhenFieldHasChanged('date', has_changed=True))
     def update_scheduler(self):
         pass
-        # if self.celery_task:
-        #     AsyncResult(self.celery_task).revoke()
-        # res = send_reminder.apply_async(
-        #     args=[self.user, self],
-        #     eta=self.date
-        # )
-        # self.celery_task = res.id
-        # self.save(update_fields=['celery_task'])
+        if self.celery_task:
+            AsyncResult(self.celery_task).revoke()
+        res = send_reminder.apply_async(
+            args=[self.user, self],
+            eta=self.date
+        )
+        self.celery_task = res.id
+        self.save(update_fields=['celery_task'])
 
     @hook(AFTER_UPDATE, condition=(WhenFieldHasChanged('canceled', has_changed=True) or WhenFieldHasChanged('complete', has_changed=True)))
     def delete_scheduler(self):
         pass
-        # if self.celery_task:
-        #     AsyncResult(self.celery_task).revoke()
-        # self.celery_task = ''
-        # self.save(update_fields=['celery_task'])
+        if self.celery_task:
+            AsyncResult(self.celery_task).revoke()
+        self.celery_task = ''
+        self.save(update_fields=['celery_task'])
