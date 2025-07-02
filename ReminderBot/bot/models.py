@@ -1,3 +1,5 @@
+import datetime
+
 from celery.result import AsyncResult
 
 from django.db import models
@@ -52,9 +54,17 @@ class Task(LifecycleModelMixin, models.Model):
 
     @hook(AFTER_CREATE)
     def create_scheduler(self):
-        pass
+        user = {
+            'telegram_id': self.user.telegram_id
+        }
+        task = {
+            'id': self.id,
+            'header': self.header,
+            'description': self.description,
+            "date": datetime.datetime.strftime(self.date, '%Y-%m-%dT%H:%M:%SZ')
+        }
         res = send_reminder.apply_async(
-            args=[self.user, self],
+            args=[user, task],
             eta=self.date
         )
         self.celery_task = res.id
@@ -62,11 +72,19 @@ class Task(LifecycleModelMixin, models.Model):
 
     @hook(AFTER_UPDATE, condition=WhenFieldHasChanged('date', has_changed=True))
     def update_scheduler(self):
-        pass
+        user = {
+            'telegram_id': self.user.telegram_id
+        }
+        task = {
+            'id': self.id,
+            'header': self.header,
+            'description': self.description,
+            "date": datetime.datetime.strftime(self.date, '%Y-%m-%dT%H:%M:%SZ')
+        }
         if self.celery_task:
             AsyncResult(self.celery_task).revoke()
         res = send_reminder.apply_async(
-            args=[self.user, self],
+            args=[user, task],
             eta=self.date
         )
         self.celery_task = res.id
@@ -74,7 +92,6 @@ class Task(LifecycleModelMixin, models.Model):
 
     @hook(AFTER_UPDATE, condition=(WhenFieldHasChanged('canceled', has_changed=True) or WhenFieldHasChanged('complete', has_changed=True)))
     def delete_scheduler(self):
-        pass
         if self.celery_task:
             AsyncResult(self.celery_task).revoke()
         self.celery_task = ''
