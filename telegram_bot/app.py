@@ -352,11 +352,11 @@ def move_task(call):
 
 
 # Bot non-stop working
-# while True:
-#     try:
-#         tbot.polling(none_stop=True)
-#     except Exception as e:
-#         print(f"Ошибка polling: {e}")
-#         time.sleep(1)
+while True:
+    try:
+        tbot.polling(none_stop=True)
+    except Exception as e:
+        print(f"Ошибка polling: {e}")
+        time.sleep(1)
 
-tbot.polling(none_stop=True)
+# tbot.polling(none_stop=True)

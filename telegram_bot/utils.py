@@ -203,6 +203,7 @@ def edit_task(task_id, field, value):
         else:
             date_obj = validate_datetime(value)
             date_utc = convert_to_utc(date_obj, user['timezone'])
+            print(convert_datetime_for_request(date_utc))
             request_tasks_update(task_id, field, convert_datetime_for_request(date_utc))
     else:
         request_tasks_update(task_id, field, 1)
@@ -211,6 +212,7 @@ def edit_task(task_id, field, value):
 if __name__ == '__main__':
     # date = convert_datetime_for_obj('2025-06-27T13:40:00Z')
     # print(convert_to_user_tz(date, 268699254).strftime('%d.%m.%Y %H:%M'))
+    # print(request_tasks_update(3, 'date', '2025-07-27T13:40:00Z'))
     print(edit_task(3, 'date', '04.07.2025 04:28'))
     # datetime_test = Task.objects.get(id=2).date
     # tz = User.objects.get(id=3).timezone

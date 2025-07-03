@@ -11,6 +11,8 @@ services:
     environment:
       FLASK_HOST: flask_listener
       FLASK_PORT: 5005
+      CELERY_BROKER_URL: redis://redis:6379/0
+      CELERY_RESULT_BACKEND: redis://redis:6379/0
     command: >
         bash -c "python ReminderBot/manage.py migrate &&
                python ReminderBot/manage.py runserver 0.0.0.0:8000"
@@ -23,7 +25,10 @@ services:
 
   celery:
     build: .
-    command: celery -A ReminderBot.celery_scheduler worker --loglevel=info
+    environment:
+      CELERY_BROKER_URL: redis://redis:6379/0
+      CELERY_RESULT_BACKEND: redis://redis:6379/0
+    command: celery -A ReminderBot worker --loglevel=info
     volumes:
       - .:/app
     depends_on:
