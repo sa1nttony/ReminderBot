@@ -268,7 +268,7 @@ def get_update_task_info(call):
         tbot.edit_message_text(chat_id=call.from_user.id, message_id=call.message.message_id, text=text,
                                reply_markup=markup)
 
-
+#FIXME обернуть в трайкэтч с проверкой даты на валидность
 def update_task(message, task_id, field, bot_message):
     edit_task(task_id, field, message.text)
     task = request_task('id', task_id)[0]
@@ -341,9 +341,11 @@ def move_task(call):
         '6h': datetime.timedelta(hours=6),
         '1d': datetime.timedelta(days=1),
     }
-    task = request_task('id', call.data.split(":")[1])
-    new_date = task['date'] + periods[call.data.split(':')[2]]
-    edit_task(task['id'], "date", new_date)
+    task = request_task('id', call.data.split(":")[1])[0]
+    new_date = convert_to_user_tz(convert_datetime_for_obj(task['date']), call.from_user.id) + periods[call.data.split(':')[2]]
+    print(new_date.strftime("%d.%m.%Y %H:%M"))
+    edit_task(task['id'], "date", new_date.strftime("%d.%m.%Y %H:%M"))
+    task = request_task('id', call.data.split(":")[1])[0]
     text = f"""<strong>➡️📅 Событие перенесено:</strong>
 <strong>Название</strong>: <em>{task['header']}</em>
 <strong>Описание</strong>: <em>{task['description']}</em>
