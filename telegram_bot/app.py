@@ -33,8 +33,9 @@ tbot = telebot.TeleBot(TOKEN, threaded=True, num_threads=300, parse_mode='HTML')
 #TODO Добавление чата в бд при добавлении бота, добавления юзера в список пользователей чата, при добавлении его в чат, исправить функцию new_task
 @tbot.message_handler(commands=['help'])
 def info(message: telebot.types.Message):
-    text = """Цель бота - напоминать о важных событиях, встречах или просто напомнить о запланированных делах. 
-Список доступных команд:
+    text = """Никогда нельзя забывать о важных событиях или запланированных делах, лучше куда-нибудь их записать. Ежедневник можно потерять, до календаря долго тянуться, а телеграм всегда под рукой. 
+Расскажи боту, что тебе предстоит, а он не даст тебе забыть об этом. 
+Список доступных команд бота:
 """
     counter = 1
     for c in [*commands]:
@@ -270,14 +271,23 @@ def get_update_task_info(call):
 
 #FIXME обернуть в трайкэтч с проверкой даты на валидность
 def update_task(message, task_id, field, bot_message):
-    edit_task(task_id, field, message.text)
-    task = request_task('id', task_id)[0]
-    tbot.delete_message(message.chat.id, message.id)
-    text = f"""<strong>⭐️ Изменения внесены:</strong>
-<strong>Название</strong>: <em>{task['header']}</em>
-<strong>Описание</strong>: <em>{task['description']}</em>
-<strong>Дата и время</strong>: <em>{convert_to_user_tz(convert_datetime_for_obj(task['date']), message.from_user.id).strftime("%d.%m.%Y %H:%M")}</em>"""
-    tbot.edit_message_text(chat_id=bot_message.chat.id, message_id=bot_message.id, text=text)
+    error_message = None
+    if field == 'date':
+        try:
+            validate_datetime(message.text)
+        except Exception as e:
+            error_message = tbot.send_message(message.chat.id, f'{e}. Попробуйте еще раз')
+            send_tasks(message.from_user.id, message.chat.id)
+    if not error_message:
+        edit_task(task_id, field, message.text)
+        task = request_task('id', task_id)[0]
+        tbot.delete_message(message.chat.id, message.id)
+        text = f"""<strong>⭐️ Изменения внесены:</strong>
+    <strong>Название</strong>: <em>{task['header']}</em>
+    <strong>Описание</strong>: <em>{task['description']}</em>
+    <strong>Дата и время</strong>: <em>{convert_to_user_tz(convert_datetime_for_obj(task['date']), message.from_user.id).strftime("%d.%m.%Y %H:%M")}</em>"""
+        tbot.edit_message_text(chat_id=bot_message.chat.id, message_id=bot_message.id, text=text)
+
 
 
 @tbot.callback_query_handler(func=lambda call: call.data.startswith("delete_task:"))
