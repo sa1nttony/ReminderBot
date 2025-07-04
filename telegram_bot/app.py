@@ -70,7 +70,7 @@ def get_user_tz(message):
     tbot.send_message(message.chat.id, text, reply_markup=markup)
 
 
-@tbot.message_handler(commands=['tz'])
+@tbot.message_handler(commands=['timezonez'])
 def change_user_tz(message: telebot.types.Message):
     user_tz = request_user('telegram_id', message.from_user.id)['timezone']
     text = f"Твой текущий часовой пояс - {user_tz}"
