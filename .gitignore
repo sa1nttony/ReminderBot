@@ -8,3 +8,4 @@
 /ReminderBot/bot/__pycache__/
 ReminderBot/__pycache__/
 ReminderBot/bot/migrations/__pycache__/
+/ReminderBot/db.sqlite3
