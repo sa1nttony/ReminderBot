@@ -3,6 +3,8 @@ version: '3.8'
 services:
   redis:
     image: redis:7-alpine
+    volumes:
+      - redis-data:/data
     ports:
       - "6379:6379"
 
@@ -62,3 +64,6 @@ services:
       - "5005:5005"
     depends_on:
       - web
+
+volumes:
+  redis-data: {}
