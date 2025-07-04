@@ -18,11 +18,11 @@ class User(LifecycleModelMixin, AbstractUser):
     timezone = models.CharField(max_length=63, default='UTC', verbose_name='Часовой пояс')
     telegram_id = models.CharField(max_length=256)
 
-    @hook(AFTER_CREATE or AFTER_UPDATE, condition=WhenFieldHasChanged('password', has_changed=True))
-    def encode_password(self):
-        password = self.password
-        self.set_password(password)
-        self.save(update_fields=['password'])
+    # @hook(AFTER_CREATE)
+    # def encode_password(self):
+    #     password = self.password
+    #     self.set_password(password)
+    #     self.save(update_fields=['password'])
 
     @hook(AFTER_UPDATE, condition=WhenFieldHasChanged('password', has_changed=True))
     def encode_password(self):

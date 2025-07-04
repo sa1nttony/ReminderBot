@@ -154,12 +154,14 @@ def add_new_user(firstname, username, telegram_id):
         raise UserAlreadyExist
     else:
         password = generate_code()
-        request_user_create(firstname=firstname, username=username, telegram_id=telegram_id)
+        user = request_user_create(firstname=firstname, username=username, telegram_id=telegram_id)
+        request_user_update(user['id'], 'password', password)
         return password
 
 
 def update_user_tz(timezone: str, telegram_id: str):
     user = request_user('telegram_id', telegram_id)
+    request_user_update(user['id'], 'timezone', timezone)
 
 
 def user_exist(telegram_id):
@@ -181,6 +183,7 @@ def new_password(telegram_id):
 
 
 def new_task(header, description, date, telegram_id):
+    print(header, description, date, telegram_id)
     user = request_user('telegram_id', telegram_id)
     date_utc = convert_to_utc(date, user['timezone'])
     request_tasks_create(header=header, description=description, date=date_utc, telegram_id=telegram_id)
