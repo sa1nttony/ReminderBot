@@ -1,9 +1,9 @@
 <br />
 <div align="center">
   <img src="ReminderBot_logo.png" alt="Logo" width="80" height="80">
-  <h3 align="center">Reminder_Bot</h3>
+  <h3 align="center">Remi (Reminder Bot)</h3>
   <p align="center">
-    A bot that helps not to forget about important events
+    Бот, который не даст забыть о важных делах
   </p>
 </div>
 

@@ -1,7 +1,7 @@
 <br />
 <div align="center">
   <img src="ReminderBot_logo.png" alt="Logo" width="80" height="80">
-  <h3 align="center">Reminder_Bot</h3>
+  <h3 align="center">Remi (Reminder Bot)</h3>
   <p align="center">
     A bot that helps not to forget about important events
   </p>
@@ -30,7 +30,7 @@
 
 
 <!-- ABOUT THE PROJECT -->
-## О проекте
+## About the Project
 
 The goal of this project is to provide a convenient environment for logging events and receiving reminders about them wherever you are, on any device.
 
