@@ -9,100 +9,105 @@
 
 <!-- TABLE OF CONTENTS -->
 <details>
-  <summary>Table of Contents</summary>
+  <summary>Содержание</summary>
   <ol>
     <li>
-      <a href="#about-the-project">About The Project</a>
+      <a href="#about-the-project">О проекте</a>
     </li>
     <li>
-      <a href="#getting-started">Getting Started</a>
+      <a href="#getting-started">Попробуйте!</a>
       <ul>
-        <li><a href="#prerequisites">Prerequisites</a></li>
-        <li><a href="#installation">Installation</a></li>
+        <li><a href="#prerequisites">Создайте своего Remi</a></li>
+        <li><a href="#installation">Установка и запуск</a></li>
       </ul>
     </li>
-    <li><a href="#usage">Usage</a></li>
-    <li><a href="#roadmap">Roadmap</a></li>
-    <li><a href="#contact">Contact</a></li>
+    <li><a href="#usage">Использование</a></li>
+    <li><a href="#roadmap">Уже сделано</a></li>
+    <li><a href="#contact">Контакты</a></li>
   </ol>
 </details>
 
 
 
 <!-- ABOUT THE PROJECT -->
-## About The Project
+## О проекте
 
-The purpose of this bot is to remind about important events of both one person and a group of people.
+Цель проекта - сформировать удобную среду для ведения журнала событий и получения напоминаний о них в удобном месте, на любых устройствах.
 
-The differences between this bot and the built-in telegram function of reminders and deferred messages are as follows:
-1. Reminders are executed several times: a day, two hours and at the time of the event
-2. The user is required to confirm that the reminder task has been completed, otherwise the task is postponed for an hour later
-3. It is possible to easily move the date and time of the event to any time without changing the other parameters of the task
-4. In the future, the addition of a web application that allows you to view and edit user tasks in real time, and tasks given by the user for other group members
+Разница между данным проектом и встроенной в телеграм функцией отраавки отложенных сообщений в следующем:
+1. Пользователь не просто получает уведомление о событии, но может и перенести его на более удобное время в будущем
+2. Легко отслеживать все грядущие события в одном месте, не меняя приложений, чаты или устройство. Бот покажет тебе все предстоящие события
+3. Просто менять параметры напоминания: описание, дату, время. Не нужно удалять отложенное сообщения и писать новое.
+4. В будущем будут добавляться новые возможности: установка дополнительных напоминаний перед событием, ведение напоминаний в групповых чатах, веб-сервис с удобной диаграммой Ганта и статистикой
 
 
 <!-- GETTING STARTED -->
-## Getting Started
+## Попробуйте!
 
-The bot is not ready yet, so I won't be able to share a working link, but you can try using the bot yourself
+Попробовать бота можно уже сейчас: [RemiMeBot](https://t.me/RemiMeBot)
 
-### Prerequisites
-For correct work you need to install several packages:
-  ```
-  pip3 install apscheduler
-  pip3 install pyTelegramBotAPI
-  pip3 python-dotenv
-  ```
+### Создайте своего Remi
 
-### Installation
+Весь исходный код находится в свободном доступе. Вы можете развернуть сервис на своем сервере для личного использования.
+На сервере должен быть установлен Docker Compose version v2.16.0 или выше
 
-A couple more steps to launch the bot:
+### Установка и запуск
 
-1. Register bot with <a href="https://t.me/BotFather">@BotFather</a> and get API Key. For more information see <a href="https://core.telegram.org/bots/features#botfather">oficial documentation</a>
-2. Clone the repo
+Пара шагов для запуска бота:
+
+1. Зарегистрируйте своего бота с помощью <a href="https://t.me/BotFather">@BotFather</a> и получите API Key. <br>
+Подробнее в <a href="https://core.telegram.org/bots/features#botfather">Официальной документации</a><br>
+Не забудьте отредактировать доступные команды для бота: `/mybots -> @Ваш_бот -> Edit bot -> Edit commands` <br>
+Отправьте команды:
+   ```
+   help - Узнать больше
+   start - Начать работу
+   timezone - Сменить часовой пояс
+   new_task - Создать новую задачу
+   show_tasks - Просмотреть список задач
+   ```
+2. Клонируйте репозиторий
    ```
    git clone https://github.com/sa1nttony/ReminderBot
    ```
-3. in the same directory with the project folder, create folder `environments\ReminderBot` and create a `.env` file in it
+3. В папке `environments` создайте файл `.env`
    ```
-   \---environments
-   |   \---ReminderBot
+   \---ReminderBot
+   |   \---environments
    |   |   +---.env
-   +---ReminderBot
    ```
-4. Enter your API Key in `.env`
+4. Поместите API Key в файл `.env` таким образом:
    ```
-   TOKEN = 'your API Key here'
+   TOKEN = 'Ваш API Key сюда'
    ```
-5. Run `db_initial.py` in any IDE to make your own database
-6. Run `app.py` in any IDE
-
+5. В директории проекта выполните команду
+   ```
+   docker compose up -d
+   ```
+6. Готово, теперь можете писать вашему боту
 
 <!-- USAGE EXAMPLES -->
-## Usage
+## Использование
 
-1. Send `/init` to bot, for initial your account
-2. Send `/new_task` to add new task
-
-The bot can be used in group chats. To assign a task to another chat user, you need to get the administrator status with the command `/admin`
-The user to whom you are giving the task must also be initialized
-
+Использовать бота легко, просто отправьте `/start` и поделитесь вашей геопозицией, чтобы получать уведомления по вашему местному времени. А затем создайте нужные уведомления с помощью `/new_task`. Для редактирования уведомлений можно воспользоваться командой `/show_tasks` и перейти к редактированию конткретного напоминания
 
 <!-- ROADMAP -->
-## Roadmap
+## Уже сделано:
 
-- [x] Add the ability to create and store tasks
-- [x] Add the ability to work in a group chat
-- [ ] Add the ability to edit and delete tasks
-- [ ] Add the ability to output user tasks on request
-- [ ] Add the ability to receive notifications about tasks
-- [ ] Create a web application with the ability to create, edit, delete and view your tasks and tasks to other users
+- [x] Добавить возможность <strong>создавать напоминания</strong>
+- [x] Добавить возможность <strong>получать уведомления</strong>
+- [x] Добавить возможность <strong>изменять и удалять напоминания</strong>
+- [x] Добавить возможность <strong>учитывать часовой пояс пользователя</strong>
+- [x] Добавить возможность <strong>переноса напоминаний</strong>
+- [ ] Добавить возможность <strong>получения дополнительных напоминаний перед событием</strong>
+- [ ] Добавить возможность <strong>выбора даты и времени через календарь, вместо ручного ввода</strong>
+- [ ] Добавить <strong>веб-сервис с диаграммой Ганта и отображением всех напоминаний и возможностью их редактирования и ведения статистики</strong>
 
 
 <!-- CONTACT -->
-## Contact
+## Контакты
 
-Feel free to give any tips, how i can make my code better
+Буду рад ответить на ваши вопросы или услышать ваши советы по доработке моего проекта.
 
 Telegram: [@sa1nttony](https://t.me/sa1nttony)
 

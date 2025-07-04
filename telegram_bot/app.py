@@ -160,7 +160,7 @@ def task_datetime(message, task_info):
 <strong>Название</strong>: <em>{task_info['header']}</em>
 <strong>Описание</strong>: <em>{task_info['description']}</em>
 _____
-Теперь укажите дату события в формате "ДД ММ ГГГГ ЧЧ:ММ". Например "{datetime.datetime.now().strftime("%d.%m.%Y %H:%M")}\""""
+Теперь укажите дату события в формате "ДД ММ ГГГГ ЧЧ:ММ". Например "{convert_to_user_tz(datetime.datetime.now(), message.from_user.id).strftime("%d.%m.%Y %H:%M")}\""""
     tbot.edit_message_text(message_text, task_info['prev_msg'][0], task_info['prev_msg'][1])
     tbot.register_next_step_handler(message, create_task, task_info)
 
@@ -177,7 +177,7 @@ def create_task(message: telebot.types.Message, task_info):
 _____
 ❌ Ошибка
 {error}
-Укажите дату события в формате "ДД.ММ.ГГГГ ЧЧ:ММ". Например "{datetime.datetime.now().strftime("%d.%m.%Y %H:%M")}\""""
+Укажите дату события в формате "ДД.ММ.ГГГГ ЧЧ:ММ". Например "{convert_to_user_tz(datetime.datetime.now(), message.from_user.id).strftime("%d.%m.%Y %H:%M")}\""""
         tbot.edit_message_text(error_text, task_info['prev_msg'][0], task_info['prev_msg'][1])
         tbot.register_next_step_handler(message, create_task, task_info)
     else:
@@ -254,7 +254,7 @@ def get_update_task_info(call):
     _________________
     Отправьте новое значение:"""
         if field == 'date':
-            text = text + f'\n Подсказка: дату и время события вводи в формате {datetime.datetime.now().strftime("%d.%m.%Y %H:%M")}'
+            text = text + f'\n Подсказка: дату и время события вводи в формате {convert_to_user_tz(datetime.datetime.now(), call.from_user.id).strftime("%d.%m.%Y %H:%M")}'
         tbot.edit_message_text(chat_id=call.from_user.id, message_id=call.message.message_id, text=text, reply_markup=None)
         tbot.register_next_step_handler(call.message, update_task, task_id, field, call.message)
     else:
@@ -365,11 +365,11 @@ def move_task(call):
 
 
 # Bot non-stop working
-while True:
-    try:
-        tbot.polling(none_stop=True)
-    except Exception as e:
-        print(f"Ошибка polling: {e}")
-        time.sleep(1)
+# while True:
+#     try:
+#         tbot.polling(none_stop=True)
+#     except Exception as e:
+#         print(f"Ошибка polling: {e}")
+#         time.sleep(1)
 
-# tbot.polling(none_stop=True)
+tbot.polling(none_stop=True)
