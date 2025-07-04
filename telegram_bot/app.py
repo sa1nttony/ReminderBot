@@ -124,7 +124,8 @@ def start_task(message: telebot.types.Message):
     task_info = {}
     task_info['chat'] = message.chat.id
     task_info['user'] = telegram_id
-    msg = tbot.send_message(message.chat.id, f'Начинаем создание новой задачи для @{task_info["user"]}\n'
+    task_info['username'] = message.from_user.username
+    msg = tbot.send_message(message.chat.id, f'Начинаем создание новой задачи для @{task_info["username"]}\n'
                                      f'Укажите короткое описание события. Например "{example_headers[random.randint(0, len(example_headers)-1)]}"')
     task_info['prev_msg'] = (msg.chat.id, msg.id)
     tbot.register_next_step_handler(message, task_header, task_info)
@@ -134,7 +135,7 @@ def task_user(message, task_info):
     task_info['user'] = message.text[1::]
     tbot.delete_message(message.chat.id, message.id)
     tbot.delete_message(message.chat.id, message.id - 1)
-    msg = tbot.send_message(message.chat.id, f'Начинаем создание новой задачи для @{task_info["user"]}\n'
+    msg = tbot.send_message(message.chat.id, f'Начинаем создание новой задачи для @{task_info["username"]}\n'
                                              f'Укажите короткое описание события. Например "{example_headers[random.randint(0, len(example_headers) - 1)]}"')
     tbot.register_next_step_handler(msg, task_header, task_info)
 
@@ -364,11 +365,11 @@ def move_task(call):
 
 
 # Bot non-stop working
-while True:
-    try:
-        tbot.polling(none_stop=True)
-    except Exception as e:
-        print(f"Ошибка polling: {e}")
-        time.sleep(1)
+# while True:
+#     try:
+#         tbot.polling(none_stop=True)
+#     except Exception as e:
+#         print(f"Ошибка polling: {e}")
+#         time.sleep(1)
 
-# tbot.polling(none_stop=True)
+tbot.polling(none_stop=True)

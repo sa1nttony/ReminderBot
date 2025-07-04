@@ -163,8 +163,15 @@ def update_user_tz(timezone: str, telegram_id: str):
 
 
 def user_exist(telegram_id):
-    if request_user('telegram_id', telegram_id):
-        return True
+    try:
+        user = request_user('telegram_id', telegram_id)
+    except Exception as e:
+        return False
+    else:
+        if user:
+            return True
+        else:
+            return False
 
 
 def new_password(telegram_id):
