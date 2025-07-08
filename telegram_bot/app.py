@@ -365,6 +365,19 @@ def move_task(call):
 
 
 # Bot non-stop working
+
+if __name__ == '__main__':
+    while True:
+        try:
+            tbot.infinity_polling(
+                timeout=60,
+                long_polling_timeout=90,
+                none_stop=True,
+            )
+        except Exception as e:
+            print(f"[bot] polling error: {e!r}, reconnecting in 5s…")
+            time.sleep(5)
+
 # while True:
 #     try:
 #         tbot.polling(none_stop=True)
@@ -372,4 +385,4 @@ def move_task(call):
 #         print(f"Ошибка polling: {e}")
 #         time.sleep(1)
 
-tbot.polling(none_stop=True)
+# tbot.polling(none_stop=True)

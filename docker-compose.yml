@@ -12,6 +12,7 @@ services:
 
   web:
     build: .
+    hostname: web
     environment:
       FLASK_HOST: flask_listener
       FLASK_PORT: 5005
@@ -22,8 +23,10 @@ services:
                python ReminderBot/manage.py runserver 0.0.0.0:8000"
     volumes:
       - .:/app
-    ports:
-      - "8000:8000"
+#    ports:
+#      - "8000:8000"
+    expose:
+      - "8000"
     depends_on:
       - redis
 
@@ -35,13 +38,31 @@ services:
       FLASK_PORT: 5005
       CELERY_BROKER_URL: redis://redis:6379/0
       CELERY_RESULT_BACKEND: redis://redis:6379/0
-    command: celery -A ReminderBot.celery_scheduler:app worker --loglevel=info --pool=solo
+    command: celery -A ReminderBot.celery_scheduler:app worker --loglevel=info --pool=solo --concurrency=1
     volumes:
       - .:/app
     depends_on:
       - redis
       - web
       - flask_listener
+
+  beat:
+    build: .
+    working_dir: /app/ReminderBot
+    environment:
+      FLASK_HOST: flask_listener
+      FLASK_PORT: 5005
+      CELERY_BROKER_URL: redis://redis:6379/0
+      CELERY_RESULT_BACKEND: redis://redis:6379/0
+    command: >
+      celery -A ReminderBot.celery_scheduler:app beat
+      --loglevel=info
+      --scheduler django_celery_beat.schedulers:DatabaseScheduler
+    volumes:
+      - .:/app
+    depends_on:
+      - redis
+      - web
 
   bot:
     build: .
