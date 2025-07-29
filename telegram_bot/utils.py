@@ -67,7 +67,8 @@ def request_user_update(id, field, value):
     return request.json()
 
 #Task
-def request_task(field, value):
+def request_task(field, value, show_old=False):
+    # old = if not show_old 'complete=0&canceled=0' else 'complete=1&canceled=0'
     tasks = requests.get(f"{BASE}/tasks/?{field}={value}&complete=0&canceled=0").json()
     return tasks
 
@@ -223,7 +224,8 @@ if __name__ == '__main__':
     # date = convert_datetime_for_obj('2025-06-27T13:40:00Z')
     # print(convert_to_user_tz(date, 268699254).strftime('%d.%m.%Y %H:%M'))
     # print(request_tasks_update(3, 'date', '2025-07-27T13:40:00Z'))
-    print(edit_task(3, 'date', '04.07.2025 04:28'))
+    print(convert_to_utc(datetime.datetime.now(), 'UTC'))
+    # print(edit_task(3, 'date', '04.07.2025 04:28'))
     # datetime_test = Task.objects.get(id=2).date
     # tz = User.objects.get(id=3).timezone
     # print(convert_to_user_tz(datetime_test, tz))

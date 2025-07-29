@@ -47,8 +47,8 @@ def info(message: telebot.types.Message):
 
 @tbot.message_handler(commands=['start'])
 def register_user(message: telebot.types.Message):
-    firstname = message.from_user.first_name
-    username = message.from_user.username
+    firstname = message.from_user.first_name if message.from_user.first_name else message.from_user.id
+    username = message.from_user.username if message.from_user.username else message.from_user.id
     telegram_id = message.from_user.id
     try:
         password = add_new_user(firstname, username, telegram_id)
@@ -353,7 +353,7 @@ def move_task(call):
         '1d': datetime.timedelta(days=1),
     }
     task = request_task('id', call.data.split(":")[1])[0]
-    new_date = convert_to_user_tz(convert_datetime_for_obj(task['date']), call.from_user.id) + periods[call.data.split(':')[2]]
+    new_date = convert_to_user_tz(datetime.datetime.now(), call.from_user.id) + periods[call.data.split(':')[2]]
     print(new_date.strftime("%d.%m.%Y %H:%M"))
     edit_task(task['id'], "date", new_date.strftime("%d.%m.%Y %H:%M"))
     task = request_task('id', call.data.split(":")[1])[0]
