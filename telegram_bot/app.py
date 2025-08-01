@@ -1,5 +1,3 @@
-from pickle import FALSE
-
 import telebot
 import datetime
 import random
