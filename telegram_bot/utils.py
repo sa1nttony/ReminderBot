@@ -80,8 +80,7 @@ def request_tasks_create(header, description, date, telegram_id):
         'header': header,
         'description': description,
         'date': date,
-        'user': user['id'],
-        'password': generate_code()
+        'user': user['id']
     }
     request = requests.post(url, body)
     return request.json()
